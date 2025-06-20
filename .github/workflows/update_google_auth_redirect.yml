@@ -16,7 +16,7 @@ jobs:
 
       - name: Get Vercel Preview URL
         id: vercel_preview_url
-        uses: zentered/vercel-preview-url@v1
+        uses: zentered/vercel-preview-url@v1.4.0
         with:
           vercel_token: ${{ secrets.VERCEL_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
