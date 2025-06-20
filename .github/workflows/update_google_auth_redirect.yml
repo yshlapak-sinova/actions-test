@@ -53,19 +53,15 @@ jobs:
             exit 1
           fi
 
-          # Construct the full resource name for the OAuth client.
-          FULL_CLIENT_NAME="projects/${PROJECT_NUMBER}/brands/${PROJECT_NUMBER}/oauthClients/${CLIENT_ID}"
-
-          echo "Project Number: $PROJECT_NUMBER"
-          echo "Client ID: $CLIENT_ID"
-          echo "Full Client Name: $FULL_CLIENT_NAME"
+          # Construct the full resource name for the brand.
+          BRAND_NAME="projects/${PROJECT_NUMBER}/brands/${PROJECT_NUMBER}"
 
           # The URL from the action includes 'https://'
           NEW_REDIRECT_URI="${PREVIEW_URL}/api/auth/callback/google"
 
-          echo "Fetching existing redirect URIs for client $FULL_CLIENT_NAME..."
+          echo "Fetching existing redirect URIs for client $CLIENT_ID..."
 
-          CLIENT_JSON=$(gcloud iap oauth-clients describe "$FULL_CLIENT_NAME" --format="json" --verbosity=debug)
+          CLIENT_JSON=$(gcloud iap oauth-clients describe "$CLIENT_ID" --brand="$BRAND_NAME" --format="json")
           EXISTING_URIS_ARRAY=$(echo "$CLIENT_JSON" | jq -c '.redirectUris // []')
 
           echo "Existing URIs: $EXISTING_URIS_ARRAY"
@@ -76,6 +72,6 @@ jobs:
           echo "New redirect URI to add: $NEW_REDIRECT_URI"
           echo "Updating OAuth client with new list of URIs..."
 
-          gcloud iap oauth-clients update "$FULL_CLIENT_NAME" --redirect-uris="$UPDATED_URIS_STRING"
+          gcloud iap oauth-clients update "$CLIENT_ID" --brand="$BRAND_NAME" --redirect-uris="$UPDATED_URIS_STRING"
 
           echo "Successfully updated redirect URIs."
