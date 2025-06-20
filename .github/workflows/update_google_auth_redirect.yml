@@ -34,6 +34,7 @@ jobs:
       - name: 'Update Google OAuth Client Redirect URIs'
         run: |
           set -e
+          PROJECT_ID="${{ secrets.GCP_PROJECT_ID }}"
           PROJECT_NUMBER="${{ secrets.GCP_PROJECT_NUMBER }}"
           CLIENT_ID="${{ secrets.GCP_OAUTH_CLIENT_ID }}"
           PREVIEW_URL="${{ steps.vercel_preview_url.outputs.preview_url }}"
@@ -41,6 +42,11 @@ jobs:
           if [[ -z "$PREVIEW_URL" ]]; then
             echo "Failed to get Vercel preview URL. Skipping update."
             exit 0 # Exit successfully to not block PR
+          fi
+
+          if [[ -z "$PROJECT_ID" ]]; then
+            echo "Error: GCP_PROJECT_ID secret is not set. Please set it in repository secrets."
+            exit 1
           fi
 
           if [[ -z "$PROJECT_NUMBER" ]]; then
@@ -59,9 +65,9 @@ jobs:
           # The URL from the action includes 'https://'
           NEW_REDIRECT_URI="${PREVIEW_URL}/api/auth/callback/google"
 
-          echo "Fetching existing redirect URIs for client $CLIENT_ID..."
+          echo "Fetching existing redirect URIs for client $CLIENT_ID in project $PROJECT_ID..."
 
-          CLIENT_JSON=$(gcloud iap oauth-clients describe "$CLIENT_ID" --brand="$BRAND_NAME" --format="json")
+          CLIENT_JSON=$(gcloud iap oauth-clients describe "$CLIENT_ID" --brand="$BRAND_NAME" --project="$PROJECT_ID" --format="json")
           EXISTING_URIS_ARRAY=$(echo "$CLIENT_JSON" | jq -c '.redirectUris // []')
 
           echo "Existing URIs: $EXISTING_URIS_ARRAY"
@@ -72,6 +78,6 @@ jobs:
           echo "New redirect URI to add: $NEW_REDIRECT_URI"
           echo "Updating OAuth client with new list of URIs..."
 
-          gcloud iap oauth-clients update "$CLIENT_ID" --brand="$BRAND_NAME" --redirect-uris="$UPDATED_URIS_STRING"
+          gcloud iap oauth-clients update "$CLIENT_ID" --brand="$BRAND_NAME" --project="$PROJECT_ID" --redirect-uris="$UPDATED_URIS_STRING"
 
           echo "Successfully updated redirect URIs."
