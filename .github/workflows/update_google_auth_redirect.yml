@@ -34,8 +34,8 @@ jobs:
       - name: 'Update Google OAuth Client Redirect URIs'
         run: |
           set -e
+          PROJECT_NUMBER="${{ secrets.GCP_PROJECT_NUMBER }}"
           CLIENT_ID="${{ secrets.GCP_OAUTH_CLIENT_ID }}"
-          BRAND_ID="${{ secrets.GCP_OAUTH_BRAND_ID }}"
           PREVIEW_URL="${{ steps.vercel_preview_url.outputs.preview_url }}"
 
           if [[ -z "$PREVIEW_URL" ]]; then
@@ -43,19 +43,20 @@ jobs:
             exit 0 # Exit successfully to not block PR
           fi
 
-          if [[ -z "$BRAND_ID" ]]; then
-            echo "GCP_OAUTH_BRAND_ID secret is not set. Please set it in repository secrets."
+          if [[ -z "$PROJECT_NUMBER" ]]; then
+            echo "GCP_PROJECT_NUMBER secret is not set. Please set it in repository secrets."
             exit 1
           fi
+
+          # Construct the full resource name for the OAuth client.
+          FULL_CLIENT_NAME="projects/${PROJECT_NUMBER}/brands/${PROJECT_NUMBER}/oauthClients/${CLIENT_ID}"
 
           # The URL from the action includes 'https://'
           NEW_REDIRECT_URI="${PREVIEW_URL}/api/auth/callback/google"
 
-          echo "Fetching existing redirect URIs for client $CLIENT_ID..."
+          echo "Fetching existing redirect URIs for client $FULL_CLIENT_NAME..."
 
-          # This command might fail if the client has never had any URIs set.
-          # We get the full client JSON and parse from it.
-          CLIENT_JSON=$(gcloud iap oauth-clients describe "$CLIENT_ID" --brand="$BRAND_ID" --format="json")
+          CLIENT_JSON=$(gcloud iap oauth-clients describe "$FULL_CLIENT_NAME" --format="json")
           EXISTING_URIS_ARRAY=$(echo "$CLIENT_JSON" | jq -c '.redirectUris // []')
 
           echo "Existing URIs: $EXISTING_URIS_ARRAY"
@@ -66,6 +67,6 @@ jobs:
           echo "New redirect URI to add: $NEW_REDIRECT_URI"
           echo "Updating OAuth client with new list of URIs..."
 
-          gcloud iap oauth-clients update "$CLIENT_ID" --brand="$BRAND_ID" --redirect-uris="$UPDATED_URIS_STRING"
+          gcloud iap oauth-clients update "$FULL_CLIENT_NAME" --redirect-uris="$UPDATED_URIS_STRING"
 
           echo "Successfully updated redirect URIs."
