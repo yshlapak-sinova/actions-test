@@ -56,12 +56,16 @@ jobs:
           # Construct the full resource name for the OAuth client.
           FULL_CLIENT_NAME="projects/${PROJECT_NUMBER}/brands/${PROJECT_NUMBER}/oauthClients/${CLIENT_ID}"
 
+          echo "Project Number: $PROJECT_NUMBER"
+          echo "Client ID: $CLIENT_ID"
+          echo "Full Client Name: $FULL_CLIENT_NAME"
+
           # The URL from the action includes 'https://'
           NEW_REDIRECT_URI="${PREVIEW_URL}/api/auth/callback/google"
 
           echo "Fetching existing redirect URIs for client $FULL_CLIENT_NAME..."
 
-          CLIENT_JSON=$(gcloud iap oauth-clients describe "$FULL_CLIENT_NAME" --format="json")
+          CLIENT_JSON=$(gcloud iap oauth-clients describe "$FULL_CLIENT_NAME" --format="json" --verbosity=debug)
           EXISTING_URIS_ARRAY=$(echo "$CLIENT_JSON" | jq -c '.redirectUris // []')
 
           echo "Existing URIs: $EXISTING_URIS_ARRAY"
