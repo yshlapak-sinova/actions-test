@@ -44,7 +44,12 @@ jobs:
           fi
 
           if [[ -z "$PROJECT_NUMBER" ]]; then
-            echo "GCP_PROJECT_NUMBER secret is not set. Please set it in repository secrets."
+            echo "Error: GCP_PROJECT_NUMBER secret is not set. Please set it in repository secrets."
+            exit 1
+          fi
+
+          if [[ -z "$CLIENT_ID" ]]; then
+            echo "Error: GCP_OAUTH_CLIENT_ID secret is not set. Please set it in repository secrets."
             exit 1
           fi
 
