@@ -17,11 +17,10 @@ jobs:
       - name: Get Vercel Preview URL
         id: vercel_preview_url
         uses: zentered/vercel-preview-url@v1.4.0
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         with:
-          vercel_token: ${{ secrets.VERCEL_TOKEN }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          vercel_team_id: ${{ secrets.VERCEL_TEAM_ID }} # Optional: add if your project is under a Vercel team
-          vercel_project_name: ${{ secrets.VERCEL_PROJECT_NAME }} # Optional but recommended: add your project name from Vercel
+          vercel_project_id: ${{ secrets.VERCEL_PROJECT_NAME }} # Optional but recommended: add your Vercel project ID (starts with prj_)
 
       - name: 'Authenticate to Google Cloud'
         id: 'auth'
