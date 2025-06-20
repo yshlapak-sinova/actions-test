@@ -16,18 +16,17 @@ jobs:
 
       - name: Get Vercel Preview URL
         id: vercel_preview_url
-        uses: zentered/vercel-preview-url@v1
+        uses: zentered/vercel-preview-url@v1.4.0
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         with:
-          vercel_token: ${{ secrets.VERCEL_TOKEN }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          vercel_team_id: ${{ secrets.VERCEL_TEAM_ID }} # Optional: add if your project is under a Vercel team
-          vercel_project_name: ${{ secrets.VERCEL_PROJECT_NAME }} # Optional but recommended: add your project name from Vercel
+          vercel_project_id: ${{ secrets.VERCEL_PROJECT_NAME }} # Optional but recommended: add your Vercel project ID (starts with prj_)
 
       - name: 'Authenticate to Google Cloud'
         id: 'auth'
         uses: 'google-github-actions/auth@v2'
         with:
-          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v2'
@@ -35,6 +34,8 @@ jobs:
       - name: 'Update Google OAuth Client Redirect URIs'
         run: |
           set -e
+          PROJECT_ID="${{ secrets.GCP_PROJECT_ID }}"
+          PROJECT_NUMBER="${{ secrets.GCP_PROJECT_NUMBER }}"
           CLIENT_ID="${{ secrets.GCP_OAUTH_CLIENT_ID }}"
           PREVIEW_URL="${{ steps.vercel_preview_url.outputs.preview_url }}"
 
@@ -43,14 +44,30 @@ jobs:
             exit 0 # Exit successfully to not block PR
           fi
 
+          if [[ -z "$PROJECT_ID" ]]; then
+            echo "Error: GCP_PROJECT_ID secret is not set. Please set it in repository secrets."
+            exit 1
+          fi
+
+          if [[ -z "$PROJECT_NUMBER" ]]; then
+            echo "Error: GCP_PROJECT_NUMBER secret is not set. Please set it in repository secrets."
+            exit 1
+          fi
+
+          if [[ -z "$CLIENT_ID" ]]; then
+            echo "Error: GCP_OAUTH_CLIENT_ID secret is not set. Please set it in repository secrets."
+            exit 1
+          fi
+
+          # Construct the full resource name for the brand.
+          BRAND_NAME="projects/${PROJECT_NUMBER}/brands/${PROJECT_NUMBER}"
+
           # The URL from the action includes 'https://'
           NEW_REDIRECT_URI="${PREVIEW_URL}/api/auth/callback/google"
 
-          echo "Fetching existing redirect URIs for client $CLIENT_ID..."
+          echo "Fetching existing redirect URIs for client $CLIENT_ID in project $PROJECT_ID..."
 
-          # This command might fail if the client has never had any URIs set.
-          # We get the full client JSON and parse from it.
-          CLIENT_JSON=$(gcloud iap oauth-clients describe "$CLIENT_ID" --format="json")
+          CLIENT_JSON=$(gcloud iap oauth-clients describe "$CLIENT_ID" --brand="$BRAND_NAME" --project="$PROJECT_ID" --format="json")
           EXISTING_URIS_ARRAY=$(echo "$CLIENT_JSON" | jq -c '.redirectUris // []')
 
           echo "Existing URIs: $EXISTING_URIS_ARRAY"
@@ -61,6 +78,6 @@ jobs:
           echo "New redirect URI to add: $NEW_REDIRECT_URI"
           echo "Updating OAuth client with new list of URIs..."
 
-          gcloud iap oauth-clients update "$CLIENT_ID" --redirect-uris="$UPDATED_URIS_STRING"
+          gcloud iap oauth-clients update "$CLIENT_ID" --brand="$BRAND_NAME" --project="$PROJECT_ID" --redirect-uris="$UPDATED_URIS_STRING"
 
           echo "Successfully updated redirect URIs."
